@@ -165,6 +165,7 @@ class TwitchEndpoint():
             self.creds_cache[self.current_token_index]["ratelimit_limit"] = int(res.headers.get("Ratelimit-Limit"))
             self.creds_cache[self.current_token_index]["ratelimit_remaining"] = int(res.headers.get("Ratelimit-Remaining"))
             self.creds_cache[self.current_token_index]["ratelimit_reset"] = int(res.headers.get("Ratelimit-Reset"))
+            self._cache_creds()
     
         return data_collected
     
