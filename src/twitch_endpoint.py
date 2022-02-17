@@ -224,27 +224,27 @@ if __name__ == "__main__":
     twitch = TwitchEndpoint(MAIN_DIR + "/credentials_ratelimit_cache.json")
     twitch.get_tokens()
     
-    # # Get user information
-    # selected_ids = twitch.read_selected()
-    # scraped_data = twitch.read_scraped("user_info")
-    # if scraped_data:
-    #     user_info_ids = twitch.dedup_ids(selected_ids, scraped_data, "user_info", "id")
-    # else:
-    #     user_info_ids = selected_ids
+    # Get user information
+    selected_ids = twitch.read_selected()
+    scraped_data = twitch.read_scraped("user_info")
+    if scraped_data:
+        user_info_ids = twitch.dedup_ids(selected_ids, scraped_data, "user_info", "id")
+    else:
+        user_info_ids = selected_ids
 
-    # twitch.collect_save_user_info(user_info_ids, batch_size=100)
-    # print("Collected all user info\n\n")
+    twitch.collect_save_user_info(user_info_ids, batch_size=100)
+    print("Collected all user info\n\n")
     
-    # # Get channel information
-    # selected_ids = twitch.read_selected()
-    # scraped_data = twitch.read_scraped("user_channel")
-    # if scraped_data:
-    #     user_channel_ids = twitch.dedup_ids(selected_ids, scraped_data, "user_channel", "broadcaster_id")
-    # else:
-    #     user_channel_ids = selected_ids
+    # Get channel information
+    selected_ids = twitch.read_selected()
+    scraped_data = twitch.read_scraped("user_channel")
+    if scraped_data:
+        user_channel_ids = twitch.dedup_ids(selected_ids, scraped_data, "user_channel", "broadcaster_id")
+    else:
+        user_channel_ids = selected_ids
 
-    # twitch.collect_save_user_channel(user_channel_ids, batch_size=100)
-    # print("Collected all user channels\n\n")
+    twitch.collect_save_user_channel(user_channel_ids, batch_size=100)
+    print("Collected all user channels\n\n")
     
     # Get user videos
     selected_ids = twitch.read_selected()
@@ -257,6 +257,5 @@ if __name__ == "__main__":
     twitch.collect_save_user_video(user_video_ids, batch_size=1)
     print("Collected all user videos\n\n")
     
-    # Update user followers? Who are following them?
     
     
