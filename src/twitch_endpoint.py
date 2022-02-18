@@ -78,7 +78,10 @@ class TwitchEndpoint():
 
 
     def dedup_ids(self, selected_ids, scraped_data, filename, id_key):
-        scraped_ids = set([user_info.get(id_key) for user_info in scraped_data])
+        if filename != "game_info":        
+            scraped_ids = set([info.get(id_key) for info in scraped_data])
+        else:
+            scraped_ids = set([(info.get(id_key[0]), info.get(id_key[1])) for info in scraped_data])
         
         return list(scraped_ids.symmetric_difference(set(selected_ids)))
     
@@ -122,18 +125,28 @@ class TwitchEndpoint():
         return headers
     
     
-    def _get_request(self, url):
+    def _get_request(self, url, api="twitch", query=None):
         print(f"Collecting from endpoint: {url}\n")
         self.creds_cache = self._load_credentials_cache()
         headers = self._choose_creds()
-        res = requests.get(url, headers=headers)
-        data_collected = json.loads(res.text)["data"]
-        self.creds_cache[self.current_token_index]["ratelimit_limit"] = int(res.headers.get("Ratelimit-Limit"))
-        self.creds_cache[self.current_token_index]["ratelimit_remaining"] = int(res.headers.get("Ratelimit-Remaining"))
-        self.creds_cache[self.current_token_index]["ratelimit_reset"] = int(res.headers.get("Ratelimit-Reset"))        
-        self._cache_creds()
+        if api == "twitch":
+            res = requests.get(url, headers=headers)
+            data_collected = json.loads(res.text)["data"]
+            self.creds_cache[self.current_token_index]["ratelimit_limit"] = int(res.headers.get("Ratelimit-Limit"))
+            self.creds_cache[self.current_token_index]["ratelimit_remaining"] = int(res.headers.get("Ratelimit-Remaining"))
+            self.creds_cache[self.current_token_index]["ratelimit_reset"] = int(res.headers.get("Ratelimit-Reset"))        
+            self._cache_creds()
+            
+            return data_collected
         
-        return data_collected
+        if api == "igdb":
+            res = requests.post(url, headers=headers, data=query.encode("utf-8"))
+            if res.status_code == 200:
+                data_collected = json.loads(res.text)
+                
+                return data_collected
+            else:
+                return None
 
 
     def _get_request_pagination(self, url):
@@ -220,6 +233,33 @@ class TwitchEndpoint():
             if len(data_collected) > 0:
                 self._save_collected_data(data_collected, "user_video")
     
+    
+    def collect_save_game_info(self, games):
+        print(f"Collecting game data for {len(games)} games...")
+        games_list = list(games)
+        # [TBC] Collect category mappings
+        
+        # Collect games info
+        for idx, game in enumerate(games_list):
+            if idx+1 % 4 == 0:
+                time.sleep(random.randint(0,1))
+            url = "https://api.igdb.com/v4/games"
+            if game[1] != "":
+                query = f"""fields *; where name="{game[1]}";"""
+                data_collected = self._get_request(url, "igdb", query=query)
+                if data_collected:
+                    for data in data_collected:
+                        data["twitch_game_id"] = game[0]
+                        data["twitch_game_name"] = game[1]
+                    self._save_collected_data(data_collected, "game_info")
+                else:
+                    data_collected = [{
+                        "id": "",
+                        "twitch_game_id": game[0],
+                        "twitch_game_name": game[1]
+                    }]
+                    self._save_collected_data(data_collected, "game_info")
+
 
 if __name__ == "__main__":
     twitch = TwitchEndpoint(MAIN_DIR + "/credentials_ratelimit_cache.json")
@@ -257,6 +297,19 @@ if __name__ == "__main__":
 
     twitch.collect_save_user_video(user_video_ids, batch_size=1)
     print("Collected all user videos\n\n")
+    
+    # Get game data
+    scraped_user_channel = twitch.read_scraped("user_channel")
+    selected_ids = set([(x.get("game_id"), x.get("game_name")) for x in scraped_user_channel])
+    scraped_data = twitch.read_scraped("game_info")
+    if scraped_data:
+        game_ids = twitch.dedup_ids(selected_ids, scraped_data, "game_info", ("twitch_game_id", "twitch_game_name"))
+    else:
+        game_ids = selected_ids
+    
+    twitch.collect_save_game_info(game_ids)
+    print("Collected all game info\n\n")
+    
     
     
     
